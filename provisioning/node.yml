@@ -1,0 +1,156 @@
+---
+- hosts: all
+  sudo: yes
+  remote_user: root
+  gather_facts: yes
+  roles:
+    - role: dev-sec.ssh-hardening
+      ssh_allow_root_with_key: true
+      sftp_enabled: true
+  tasks:
+    # Example group command from Ansible Playbooks
+    - group:
+        name: lxd
+        state: present
+
+    - name: Update all packages to the latest version
+      apt:
+        upgrade: dist
+        update_cache: yes
+
+    - name: Remove "foo" package
+      apt:
+        name: lxd
+        state: absent
+        autoremove: yes
+        purge: yes
+    - lineinfile:
+        path: /etc/sudoers
+        state: present
+        regexp: '^%sudo\s'
+        line: '%sudo ALL=(ALL) NOPASSWD: ALL'
+
+    - name: create a new user
+      user:
+        name: mark
+        state: present
+        groups: sudo,lxd
+        password: $6$rCWbFNhhlZK$1IOnCu5RS31gjhcln83eK1tD.ZK8PooI3D0usxSp9tPXNfmqd2t4xkYyDEpJn6pol30ipPTK26IyDQnGD6yuF/
+        shell: "/bin/bash"
+    - name: copy up public key
+      copy:
+        src: files/authorized_keys/
+        dest: /tmp/authorized_keys
+    - name: create authorized_keys file
+      shell: |
+        mkdir -p /etc/resolvconf/resolv.conf.d/
+        cp /etc/resolv.conf /etc/resolvconf/resolv.conf.d/tail
+        mkdir -p /home/mark/.ssh
+        cat /tmp/authorized_keys/* > /home/mark/.ssh/authorized_keys
+        chown -R mark.  /home/mark/.ssh
+        chmod 600  /home/mark/.ssh/authorized_keys
+
+    - name: ubuntu-minimal install
+      apt:
+        name: ubuntu-minimal
+        update_cache: yes
+        install_recommends: yes
+    - name: ubuntu-standard install
+      apt:
+        name: ubuntu-standard
+        update_cache: yes
+        install_recommends: yes
+    - name: ubuntu-advantage-tools install
+      apt:
+        name: ubuntu-advantage-tools
+        update_cache: yes
+        install_recommends: yes
+    - name: snapd install
+      apt:
+        name: snapd
+        update_cache: yes
+    - name: reboot the server1
+      shell: sleep 2 && shutdown -r now
+      async: 1
+      poll: 0
+
+
+    - name: Wait for server come back1
+      wait_for: >
+           host={{ inventory_hostname }}
+           port={{ ansible_port }}
+           delay=15
+           timeout=120
+           search_regex=OpenSSH
+      delegate_to: localhost
+      become: no
+      ignore_errors: true
+
+
+    - pause:
+        seconds: 20
+
+    - name: screen install
+      apt:
+        name: screen
+        update_cache: yes
+    - name: module-assistant install
+      apt:
+        name: module-assistant
+        update_cache: yes
+    - name: dkms install
+      apt:
+        name: dkms
+        update_cache: yes
+    - name: build-essential install
+      apt:
+        name: build-essential
+        update_cache: yes
+    - name: apparmor-utils install
+      apt:
+        name: apparmor-utils
+        update_cache: yes
+
+    - name: reboot the server2
+      shell: sleep 2 && shutdown -r now
+      async: 1
+      poll: 0
+
+
+    - name: Wait for server come back2
+      wait_for: >
+           host={{ inventory_hostname }}
+           port={{ ansible_port }}
+           delay=15
+           timeout=120
+           search_regex=OpenSSH
+      delegate_to: localhost
+      become: no
+      ignore_errors: true
+
+    - pause:
+        seconds: 20
+
+    - name: conjure-up install
+      shell: |
+        snap install conjure-up --classic
+        snap install lxd
+
+    - name: reboot the server3
+      shell: sleep 2 && shutdown -r now
+      async: 1
+      poll: 0
+
+    - name: Wait for server come back3
+      wait_for: >
+           host={{ inventory_hostname }}
+           port={{ ansible_port }}
+           delay=15
+           timeout=120
+           search_regex=OpenSSH
+      delegate_to: localhost
+      become: no
+      ignore_errors: true
+
+    - pause:
+        seconds: 20
