@@ -15,11 +15,12 @@ ansible-playbook -i ,$IP_ADDRESS provisioning/playbook.yml --extra-vars "ansible
 ```
 
 ## Step 5
-Afterwards run, select none for ipv6 config when running lxd init 
+Afterwards run, select none for ipv6 config when running lxd init
 ```bash
 ssh mark@$IP_ADDRESS
 lxd init
-conjure-up```
+conjure-up
+```
 
 ## Step 6  install kubernetes-core
 Select kubernetes-core and accept defaults.
